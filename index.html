@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speedy Delivery Express - Home Row Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bungee&family=Inter:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #1a1a2e;
+            color: white;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        .font-game {
+            font-family: 'Bungee', cursive;
+        }
+
+        .road {
+            background: linear-gradient(0deg, #333 0%, #444 50%, #333 100%);
+            background-size: 100% 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .road-lines {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: repeating-linear-gradient(90deg, #fff, #fff 40px, transparent 40px, transparent 80px);
+            animation: moveRoad 1s linear infinite;
+        }
+
+        @keyframes moveRoad {
+            from { transform: translateX(0); }
+            to { transform: translateX(-80px); }
+        }
+
+        .car {
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .jump {
+            animation: jumpAnim 0.5s ease;
+        }
+
+        @keyframes jumpAnim {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-80px) scale(1.1); }
+        }
+
+        .shake {
+            animation: shake 0.2s ease-in-out infinite;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div id="app" class="w-full max-w-4xl bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border-4 border-emerald-400">
+        <!-- Header -->
+        <div class="bg-emerald-400 p-4 flex justify-between items-center text-gray-900 font-game">
+            <h1 class="text-xl">Speedy Home Row Express</h1>
+            <div id="player-id-display" class="text-xs">Đang kết nối...</div>
+        </div>
+
+        <!-- Game Area -->
+        <div class="relative">
+            <div id="game-container" class="p-8 space-y-8">
+                
+                <!-- Race Tracks -->
+                <div class="space-y-4">
+                    <div class="relative h-12 road rounded-xl">
+                        <div class="road-lines"></div>
+                        <div id="player-car" class="car absolute left-0 top-1 text-4xl" style="left: 0%;">🚚</div>
+                        <div class="absolute -top-6 left-0 text-xs font-bold text-emerald-400 uppercase tracking-widest">Làn đường của bạn</div>
+                    </div>
+
+                    <div id="opponent-track" class="relative h-12 road rounded-xl opacity-50">
+                        <div class="road-lines"></div>
+                        <div id="opponent-car" class="car absolute left-0 top-1 text-4xl" style="left: 0%;">🚛</div>
+                        <div id="opponent-label" class="absolute -top-6 left-0 text-xs font-bold text-blue-400 uppercase tracking-widest">Đối thủ</div>
+                    </div>
+                </div>
+
+                <!-- Typing Area -->
+                <div class="bg-gray-800 p-6 rounded-2xl text-center space-y-6 border-b-8 border-gray-700">
+                    <div class="text-xs font-bold text-emerald-400 mb-2 uppercase tracking-tighter">Đặt tay: A S D F (trái) - J K L ; (phải)</div>
+                    
+                    <div id="word-display" class="text-5xl font-game tracking-[0.2em] min-h-[60px] flex justify-center items-center">
+                        <span class="text-gray-500 italic text-lg">Gõ đúng để tiếp tục!</span>
+                    </div>
+                    
+                    <input type="text" id="typing-input" 
+                        class="w-full p-6 text-3xl text-center rounded-xl bg-gray-900 border-4 border-gray-700 focus:outline-none focus:border-emerald-400 transition-all uppercase font-mono"
+                        placeholder="Bắt đầu gõ..."
+                        autocomplete="off"
+                        spellcheck="false"
+                        disabled>
+                    
+                    <div class="flex justify-around items-center text-sm font-bold">
+                        <div class="bg-gray-700 px-4 py-2 rounded-lg text-emerald-400">TỐC ĐỘ: <span id="wpm-display">0</span> WPM</div>
+                        <div class="bg-gray-700 px-4 py-2 rounded-lg text-emerald-400">TIẾN ĐỘ: <span id="progress-display">0</span>/12</div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div id="lobby-controls" class="flex flex-col gap-4 items-center">
+                    <div class="flex gap-4">
+                        <button id="start-solo-btn" class="bg-emerald-400 hover:bg-emerald-500 text-gray-900 font-game px-8 py-4 rounded-xl shadow-[0_6px_0_rgb(5,150,105)] transition-all active:translate-y-1 active:shadow-none">
+                            LUYỆN TẬP (12 CÂU)
+                        </button>
+                        <button id="join-multi-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-game px-8 py-4 rounded-xl shadow-[0_6px_0_rgb(37,99,235)] transition-all active:translate-y-1 active:shadow-none">
+                            THI ĐẤU (12 CÂU)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Overlays -->
+            <div id="message-overlay" class="hidden absolute inset-0 bg-gray-900/95 flex flex-col items-center justify-center z-50 text-center p-8">
+                <div class="space-y-6">
+                    <div id="status-icon" class="text-8xl">🏆</div>
+                    <h2 id="status-title" class="text-5xl font-game text-emerald-400">CHIẾN THẮNG!</h2>
+                    <p id="status-desc" class="text-xl text-gray-300">Giao hàng thành công mỹ mãn.</p>
+                    <button onclick="location.reload()" class="bg-white text-black font-game px-10 py-3 rounded-full hover:bg-emerald-100 transition-colors">CHƠI LẠI</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Initialization
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'speedy-home-row-02';
+
+        const homeRowWords = [
+            "ASDF", "JKL;", "FALL", "LADS", "DAFS", "GLAD", "ALAS", "DASH", "FLAK", "SLAD",
+            "SALA", "KALS", "LAKY", "JASS", "FADS", "LASS", "SKAL", "ALFA", "JAVA", "FLASK",
+            "DAFFY", "GLASS", "SHALL", "SKULL", "FLASH", "SALSA"
+        ];
+        
+        let currentWords = [];
+        let wordIndex = 0;
+        let user = null;
+        let gameMode = 'solo';
+        let roomDocRef = null;
+        let startTime = null;
+        const GAME_LENGTH = 12;
+
+        const wordDisplay = document.getElementById('word-display');
+        const typingInput = document.getElementById('typing-input');
+        const playerCar = document.getElementById('player-car');
+        const opponentCar = document.getElementById('opponent-car');
+        const progressDisplay = document.getElementById('progress-display');
+        const wpmDisplay = document.getElementById('wpm-display');
+        const overlay = document.getElementById('message-overlay');
+        const startSoloBtn = document.getElementById('start-solo-btn');
+        const joinMultiBtn = document.getElementById('join-multi-btn');
+
+        // Auth Logic (Rule 3)
+        const initAuth = async () => {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        };
+
+        onAuthStateChanged(auth, (u) => {
+            if (u) {
+                user = u;
+                document.getElementById('player-id-display').innerText = `ID: ${user.uid.substring(0,6)}`;
+            }
+        });
+
+        initAuth();
+
+        const initGame = (mode) => {
+            gameMode = mode;
+            wordIndex = 0;
+            currentWords = [...homeRowWords].sort(() => 0.5 - Math.random()).slice(0, GAME_LENGTH);
+            
+            typingInput.disabled = false;
+            typingInput.value = "";
+            typingInput.focus();
+            document.getElementById('lobby-controls').classList.add('hidden');
+            
+            renderWord();
+            startTime = Date.now();
+        };
+
+        const renderWord = () => {
+            if (wordIndex >= GAME_LENGTH) {
+                endGame(true);
+                return;
+            }
+
+            const target = currentWords[wordIndex];
+            const typed = typingInput.value.toUpperCase();
+            
+            let html = "";
+            let isWrong = false;
+
+            for (let i = 0; i < target.length; i++) {
+                if (i < typed.length) {
+                    if (typed[i] === target[i]) {
+                        html += `<span class="text-emerald-400">${target[i]}</span>`;
+                    } else {
+                        html += `<span class="text-red-500 underline decoration-double">${target[i]}</span>`;
+                        isWrong = true;
+                    }
+                } else {
+                    html += `<span class="text-gray-600">${target[i]}</span>`;
+                }
+            }
+
+            wordDisplay.innerHTML = html;
+
+            if (isWrong) {
+                playerCar.classList.add('shake');
+            } else {
+                playerCar.classList.remove('shake');
+            }
+
+            if (typed === target) {
+                wordIndex++;
+                typingInput.value = "";
+                moveCar();
+                renderWord();
+            }
+        };
+
+        const moveCar = () => {
+            const progress = (wordIndex / GAME_LENGTH) * 90;
+            playerCar.style.left = `${progress}%`;
+            playerCar.classList.add('jump');
+            setTimeout(() => playerCar.classList.remove('jump'), 500);
+            
+            progressDisplay.innerText = wordIndex;
+            
+            const elapsed = (Date.now() - startTime) / 60000;
+            wpmDisplay.innerText = Math.round(wordIndex / elapsed) || 0;
+
+            if (gameMode === 'multi' && roomDocRef && user) {
+                updateDoc(roomDocRef, { [`progress.${user.uid}`]: wordIndex });
+            }
+        };
+
+        typingInput.addEventListener('input', renderWord);
+
+        const endGame = (won) => {
+            typingInput.disabled = true;
+            overlay.classList.remove('hidden');
+            const title = document.getElementById('status-title');
+            const icon = document.getElementById('status-icon');
+            
+            if (won) {
+                title.innerText = "XUẤT SẮC!";
+                icon.innerText = "🏆";
+            } else {
+                title.innerText = "THẤT BẠI!";
+                icon.innerText = "🥈";
+                title.classList.replace('text-emerald-400', 'text-blue-400');
+            }
+
+            if (gameMode === 'multi' && roomDocRef && won) {
+                updateDoc(roomDocRef, { winner: user.uid });
+            }
+        };
+
+        const joinMultiplayer = async () => {
+            if (!user) return;
+            joinMultiBtn.innerText = "ĐANG TÌM PHÒNG...";
+            joinMultiBtn.disabled = true;
+
+            // Correct path structure (Rule 1): artifacts/{appId}/public/data/{collection}/{docId}
+            roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'matches', 'global_room');
+
+            onSnapshot(roomDocRef, (snapshot) => {
+                const data = snapshot.data();
+                
+                if (!data || data.winner || (Date.now() - data.createdAt > 300000)) {
+                    setDoc(roomDocRef, {
+                        players: [user.uid],
+                        progress: { [user.uid]: 0 },
+                        status: 'waiting',
+                        winner: null,
+                        createdAt: Date.now()
+                    });
+                } else if (data.players.length === 1 && !data.players.includes(user.uid)) {
+                    updateDoc(roomDocRef, {
+                        players: [...data.players, user.uid],
+                        [`progress.${user.uid}`]: 0,
+                        status: 'starting'
+                    });
+                } else if (data.status === 'starting' || data.status === 'playing') {
+                    if (data.status === 'starting') {
+                        updateDoc(roomDocRef, { status: 'playing' });
+                        initGame('multi');
+                        document.getElementById('opponent-track').classList.remove('opacity-50');
+                    }
+
+                    const opponentId = data.players.find(id => id !== user.uid);
+                    if (opponentId) {
+                        const oppProgress = data.progress[opponentId] || 0;
+                        opponentCar.style.left = `${(oppProgress / GAME_LENGTH) * 90}%`;
+                    }
+
+                    if (data.winner && data.winner !== user.uid) endGame(false);
+                }
+            }, (error) => {
+                console.error("Firestore Error:", error);
+            });
+        };
+
+        startSoloBtn.onclick = () => initGame('solo');
+        joinMultiBtn.onclick = joinMultiplayer;
+
+    </script>
+</body>
+</html>
