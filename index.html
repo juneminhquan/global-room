@@ -47,15 +47,16 @@
 
         .car {
             transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: scaleX(-1);
         }
 
-        .jump {
+        .car.jump {
             animation: jumpAnim 0.5s ease;
         }
 
         @keyframes jumpAnim {
-            0%, 100% { transform: translateY(0) scale(1); }
-            50% { transform: translateY(-80px) scale(1.1); }
+            0%, 100% { transform: scaleX(-1) translateY(0); }
+            50% { transform: scaleX(-1) translateY(-80px) scale(1.1); }
         }
 
         .shake {
@@ -63,9 +64,9 @@
         }
 
         @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-4px); }
-            75% { transform: translateX(4px); }
+            0%, 100% { transform: scaleX(-1) translateX(0); }
+            25% { transform: scaleX(-1) translateX(-4px); }
+            75% { transform: scaleX(-1) translateX(4px); }
         }
     </style>
 </head>
@@ -75,22 +76,35 @@
         <!-- Header -->
         <div class="bg-emerald-400 p-4 flex justify-between items-center text-gray-900 font-game">
             <h1 class="text-xl">Speedy Home Row Express</h1>
-            <div id="player-id-display" class="text-xs">Đang kết nối...</div>
+            <div id="player-display-name" class="text-xs font-bold bg-white/30 px-2 py-1 rounded">Khách</div>
         </div>
 
-        <!-- Game Area -->
-        <div class="relative">
-            <div id="game-container" class="p-8 space-y-8">
-                
+        <div id="main-content" class="relative">
+            <!-- Name Input Screen -->
+            <div id="name-screen" class="p-8 flex flex-col items-center justify-center space-y-6 min-h-[400px]">
+                <div class="text-center space-y-2">
+                    <h2 class="text-3xl font-game text-emerald-400">Chào mừng tài xế!</h2>
+                    <p class="text-gray-400">Nhập tên của bạn để bắt đầu cuộc đua</p>
+                </div>
+                <input type="text" id="name-input" maxlength="15"
+                    class="w-full max-w-xs p-4 text-2xl text-center rounded-xl bg-gray-800 border-4 border-gray-700 focus:outline-none focus:border-emerald-400 transition-all font-game"
+                    placeholder="Tên của bạn...">
+                <button id="confirm-name-btn" class="bg-emerald-400 hover:bg-emerald-500 text-gray-900 font-game px-12 py-4 rounded-xl shadow-[0_6px_0_rgb(5,150,105)] transition-all active:translate-y-1 active:shadow-none">
+                    TIẾP TỤC
+                </button>
+            </div>
+
+            <!-- Game Container (Hidden initially) -->
+            <div id="game-container" class="hidden p-8 space-y-8">
                 <!-- Race Tracks -->
                 <div class="space-y-4">
                     <div class="relative h-12 road rounded-xl">
                         <div class="road-lines"></div>
                         <div id="player-car" class="car absolute left-0 top-1 text-4xl" style="left: 0%;">🚚</div>
-                        <div class="absolute -top-6 left-0 text-xs font-bold text-emerald-400 uppercase tracking-widest">Làn đường của bạn</div>
+                        <div class="absolute -top-6 left-0 text-xs font-bold text-emerald-400 uppercase tracking-widest">Bạn</div>
                     </div>
 
-                    <div id="opponent-track" class="relative h-12 road rounded-xl opacity-50">
+                    <div id="opponent-track" class="relative h-12 road rounded-xl opacity-30">
                         <div class="road-lines"></div>
                         <div id="opponent-car" class="car absolute left-0 top-1 text-4xl" style="left: 0%;">🚛</div>
                         <div id="opponent-label" class="absolute -top-6 left-0 text-xs font-bold text-blue-400 uppercase tracking-widest">Đối thủ</div>
@@ -99,15 +113,13 @@
 
                 <!-- Typing Area -->
                 <div class="bg-gray-800 p-6 rounded-2xl text-center space-y-6 border-b-8 border-gray-700">
-                    <div class="text-xs font-bold text-emerald-400 mb-2 uppercase tracking-tighter">Đặt tay: A S D F (trái) - J K L ; (phải)</div>
-                    
                     <div id="word-display" class="text-5xl font-game tracking-[0.2em] min-h-[60px] flex justify-center items-center">
-                        <span class="text-gray-500 italic text-lg">Gõ đúng để tiếp tục!</span>
+                        <span class="text-gray-500 italic text-lg text-center">Chuẩn bị...</span>
                     </div>
                     
                     <input type="text" id="typing-input" 
                         class="w-full p-6 text-3xl text-center rounded-xl bg-gray-900 border-4 border-gray-700 focus:outline-none focus:border-emerald-400 transition-all uppercase font-mono"
-                        placeholder="Bắt đầu gõ..."
+                        placeholder="..."
                         autocomplete="off"
                         spellcheck="false"
                         disabled>
@@ -118,26 +130,46 @@
                     </div>
                 </div>
 
-                <!-- Controls -->
+                <!-- Game Controls -->
                 <div id="lobby-controls" class="flex flex-col gap-4 items-center">
                     <div class="flex gap-4">
                         <button id="start-solo-btn" class="bg-emerald-400 hover:bg-emerald-500 text-gray-900 font-game px-8 py-4 rounded-xl shadow-[0_6px_0_rgb(5,150,105)] transition-all active:translate-y-1 active:shadow-none">
-                            LUYỆN TẬP (12 CÂU)
+                            LUYỆN TẬP
                         </button>
                         <button id="join-multi-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-game px-8 py-4 rounded-xl shadow-[0_6px_0_rgb(37,99,235)] transition-all active:translate-y-1 active:shadow-none">
-                            THI ĐẤU (12 CÂU)
+                            THI ĐẤU
                         </button>
                     </div>
                 </div>
             </div>
 
             <!-- Overlays -->
-            <div id="message-overlay" class="hidden absolute inset-0 bg-gray-900/95 flex flex-col items-center justify-center z-50 text-center p-8">
-                <div class="space-y-6">
-                    <div id="status-icon" class="text-8xl">🏆</div>
-                    <h2 id="status-title" class="text-5xl font-game text-emerald-400">CHIẾN THẮNG!</h2>
-                    <p id="status-desc" class="text-xl text-gray-300">Giao hàng thành công mỹ mãn.</p>
-                    <button onclick="location.reload()" class="bg-white text-black font-game px-10 py-3 rounded-full hover:bg-emerald-100 transition-colors">CHƠI LẠI</button>
+            <div id="message-overlay" class="hidden absolute inset-0 bg-gray-900/98 flex flex-col items-center justify-center z-50 text-center p-6 overflow-y-auto">
+                <div class="max-w-md w-full space-y-6">
+                    <div id="status-icon" class="text-7xl">🏆</div>
+                    <h2 id="status-title" class="text-4xl font-game text-emerald-400 uppercase">Hoàn Thành!</h2>
+                    
+                    <div class="grid grid-cols-2 gap-4 bg-gray-800 p-4 rounded-2xl border-2 border-emerald-400/30">
+                        <div class="text-center">
+                            <div class="text-gray-400 text-xs uppercase">Tốc độ</div>
+                            <div class="text-3xl font-game text-white"><span id="final-wpm">0</span></div>
+                            <div class="text-[10px] text-gray-500">từ / phút</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-gray-400 text-xs uppercase">Chính xác</div>
+                            <div class="text-3xl font-game text-white"><span id="final-acc">0</span>%</div>
+                            <div class="text-[10px] text-gray-500">không lỗi</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-900/50 rounded-2xl p-4 border border-gray-700">
+                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Bảng xếp hạng tài xế</h3>
+                        <div id="leaderboard-list" class="space-y-2 text-sm">
+                            <div class="text-gray-600 italic">Đang tải...</div>
+                        </div>
+                    </div>
+
+                    <button id="restart-btn" class="w-full bg-emerald-400 text-gray-900 font-game py-4 rounded-xl hover:bg-emerald-300 transition-colors shadow-lg">CHƠI LẠI</button>
                 </div>
             </div>
         </div>
@@ -146,29 +178,31 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase Initialization
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'speedy-home-row-02';
+        let firebaseConfig = {};
+        try { if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config); } catch (e) {}
 
-        const homeRowWords = [
-            "ASDF", "JKL;", "FALL", "LADS", "DAFS", "GLAD", "ALAS", "DASH", "FLAK", "SLAD",
-            "SALA", "KALS", "LAKY", "JASS", "FADS", "LASS", "SKAL", "ALFA", "JAVA", "FLASK",
-            "DAFFY", "GLASS", "SHALL", "SKULL", "FLASH", "SALSA"
-        ];
-        
+        const homeRowWords = ["ASDF", "JKL;", "FALL", "LADS", "DAFS", "GLAD", "ALAS", "DASH", "FLAK", "SLAD", "SALA", "KALS", "LAKY", "JASS", "FADS", "LASS", "SKAL", "ALFA", "JAVA", "FLASK", "DAFFY", "GLASS", "SHALL", "SKULL", "FLASH", "SALSA"];
+
+        let app, auth, db;
+        let user = null;
+        let playerName = "Khách";
         let currentWords = [];
         let wordIndex = 0;
-        let user = null;
         let gameMode = 'solo';
         let roomDocRef = null;
         let startTime = null;
+        let totalErrors = 0;
         const GAME_LENGTH = 12;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'speedy-home-row-named';
 
+        // Elements
+        const nameScreen = document.getElementById('name-screen');
+        const gameContainer = document.getElementById('game-container');
+        const nameInput = document.getElementById('name-input');
+        const confirmNameBtn = document.getElementById('confirm-name-btn');
+        const playerDisplayName = document.getElementById('player-display-name');
         const wordDisplay = document.getElementById('word-display');
         const typingInput = document.getElementById('typing-input');
         const playerCar = document.getElementById('player-car');
@@ -176,73 +210,68 @@
         const progressDisplay = document.getElementById('progress-display');
         const wpmDisplay = document.getElementById('wpm-display');
         const overlay = document.getElementById('message-overlay');
-        const startSoloBtn = document.getElementById('start-solo-btn');
-        const joinMultiBtn = document.getElementById('join-multi-btn');
 
-        // Auth Logic (Rule 3)
-        const initAuth = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
+        // Logic đặt tên
+        confirmNameBtn.onclick = () => {
+            const val = nameInput.value.trim();
+            if (val) {
+                playerName = val;
+                playerDisplayName.innerText = playerName;
+                nameScreen.classList.add('hidden');
+                gameContainer.classList.remove('hidden');
+                localStorage.setItem('speedy_last_name', playerName);
             } else {
-                await signInAnonymously(auth);
+                nameInput.classList.add('border-red-500');
+                setTimeout(() => nameInput.classList.remove('border-red-500'), 500);
             }
         };
 
-        onAuthStateChanged(auth, (u) => {
-            if (u) {
-                user = u;
-                document.getElementById('player-id-display').innerText = `ID: ${user.uid.substring(0,6)}`;
-            }
-        });
+        // Load tên cũ nếu có
+        const savedName = localStorage.getItem('speedy_last_name');
+        if (savedName) nameInput.value = savedName;
 
-        initAuth();
+        const startApp = async () => {
+            if (!firebaseConfig.apiKey) return;
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+                else await signInAnonymously(auth);
+                onAuthStateChanged(auth, (u) => { if (u) user = u; });
+            } catch (err) { console.error("Init Error", err); }
+        };
 
         const initGame = (mode) => {
             gameMode = mode;
             wordIndex = 0;
+            totalErrors = 0;
             currentWords = [...homeRowWords].sort(() => 0.5 - Math.random()).slice(0, GAME_LENGTH);
-            
             typingInput.disabled = false;
             typingInput.value = "";
             typingInput.focus();
             document.getElementById('lobby-controls').classList.add('hidden');
-            
             renderWord();
             startTime = Date.now();
         };
 
         const renderWord = () => {
-            if (wordIndex >= GAME_LENGTH) {
-                endGame(true);
-                return;
-            }
-
+            if (wordIndex >= GAME_LENGTH) { endGame(true); return; }
             const target = currentWords[wordIndex];
             const typed = typingInput.value.toUpperCase();
-            
             let html = "";
             let isWrong = false;
 
             for (let i = 0; i < target.length; i++) {
                 if (i < typed.length) {
-                    if (typed[i] === target[i]) {
-                        html += `<span class="text-emerald-400">${target[i]}</span>`;
-                    } else {
-                        html += `<span class="text-red-500 underline decoration-double">${target[i]}</span>`;
-                        isWrong = true;
-                    }
-                } else {
-                    html += `<span class="text-gray-600">${target[i]}</span>`;
-                }
+                    if (typed[i] === target[i]) html += `<span class="text-emerald-400">${target[i]}</span>`;
+                    else { html += `<span class="text-red-500 underline underline-offset-4">${target[i]}</span>`; isWrong = true; }
+                } else html += `<span class="text-gray-600">${target[i]}</span>`;
             }
-
             wordDisplay.innerHTML = html;
 
-            if (isWrong) {
-                playerCar.classList.add('shake');
-            } else {
-                playerCar.classList.remove('shake');
-            }
+            if (isWrong) { playerCar.classList.add('shake'); totalErrors++; }
+            else playerCar.classList.remove('shake');
 
             if (typed === target) {
                 wordIndex++;
@@ -257,87 +286,87 @@
             playerCar.style.left = `${progress}%`;
             playerCar.classList.add('jump');
             setTimeout(() => playerCar.classList.remove('jump'), 500);
-            
             progressDisplay.innerText = wordIndex;
-            
             const elapsed = (Date.now() - startTime) / 60000;
             wpmDisplay.innerText = Math.round(wordIndex / elapsed) || 0;
-
-            if (gameMode === 'multi' && roomDocRef && user) {
-                updateDoc(roomDocRef, { [`progress.${user.uid}`]: wordIndex });
+            if (gameMode === 'multi' && roomDocRef && user && db) {
+                updateDoc(roomDocRef, { [`progress.${user.uid}`]: wordIndex, [`names.${user.uid}`]: playerName });
             }
         };
 
         typingInput.addEventListener('input', renderWord);
 
-        const endGame = (won) => {
-            typingInput.disabled = true;
-            overlay.classList.remove('hidden');
-            const title = document.getElementById('status-title');
-            const icon = document.getElementById('status-icon');
-            
-            if (won) {
-                title.innerText = "XUẤT SẮC!";
-                icon.innerText = "🏆";
-            } else {
-                title.innerText = "THẤT BẠI!";
-                icon.innerText = "🥈";
-                title.classList.replace('text-emerald-400', 'text-blue-400');
-            }
+        const saveToLeaderboard = (wpm) => {
+            let scores = JSON.parse(localStorage.getItem('speedy_scores') || '[]');
+            scores.push({ name: playerName, wpm, date: Date.now() });
+            scores.sort((a, b) => b.wpm - a.wpm);
+            scores = scores.slice(0, 5);
+            localStorage.setItem('speedy_scores', JSON.stringify(scores));
+            renderLeaderboard(scores);
+        };
 
-            if (gameMode === 'multi' && roomDocRef && won) {
-                updateDoc(roomDocRef, { winner: user.uid });
+        const renderLeaderboard = (scores) => {
+            const list = document.getElementById('leaderboard-list');
+            list.innerHTML = scores.map((s, idx) => `
+                <div class="flex justify-between items-center bg-gray-800/50 p-2 rounded-lg">
+                    <span class="text-emerald-400 font-game w-8">${idx + 1}.</span>
+                    <span class="text-gray-300 flex-1 text-left truncate px-2">${s.name}</span>
+                    <span class="text-white font-bold">${s.wpm} WPM</span>
+                </div>
+            `).join('');
+        };
+
+        const endGame = (won) => {
+            const timeElapsed = (Date.now() - startTime) / 60000;
+            const finalWpm = Math.round(wordIndex / timeElapsed);
+            const accuracy = Math.max(0, Math.round(((GAME_LENGTH * 4 - totalErrors) / (GAME_LENGTH * 4)) * 100));
+
+            typingInput.disabled = true;
+            document.getElementById('final-wpm').innerText = finalWpm;
+            document.getElementById('final-acc').innerText = accuracy;
+            overlay.classList.remove('hidden');
+
+            saveToLeaderboard(finalWpm);
+
+            if (gameMode === 'multi' && roomDocRef && won && user && db) {
+                updateDoc(roomDocRef, { winner: user.uid, winnerName: playerName });
             }
         };
 
         const joinMultiplayer = async () => {
-            if (!user) return;
-            joinMultiBtn.innerText = "ĐANG TÌM PHÒNG...";
+            if (!db || !user) { alert("Yêu cầu cấu hình Firebase!"); return; }
+            joinMultiBtn.innerText = "ĐANG TÌM...";
             joinMultiBtn.disabled = true;
-
-            // Correct path structure (Rule 1): artifacts/{appId}/public/data/{collection}/{docId}
             roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'matches', 'global_room');
-
             onSnapshot(roomDocRef, (snapshot) => {
                 const data = snapshot.data();
-                
                 if (!data || data.winner || (Date.now() - data.createdAt > 300000)) {
-                    setDoc(roomDocRef, {
-                        players: [user.uid],
-                        progress: { [user.uid]: 0 },
-                        status: 'waiting',
-                        winner: null,
-                        createdAt: Date.now()
-                    });
+                    setDoc(roomDocRef, { players: [user.uid], names: { [user.uid]: playerName }, progress: { [user.uid]: 0 }, status: 'waiting', winner: null, createdAt: Date.now() });
                 } else if (data.players.length === 1 && !data.players.includes(user.uid)) {
-                    updateDoc(roomDocRef, {
-                        players: [...data.players, user.uid],
-                        [`progress.${user.uid}`]: 0,
-                        status: 'starting'
-                    });
+                    updateDoc(roomDocRef, { players: [...data.players, user.uid], [`progress.${user.uid}`]: 0, [`names.${user.uid}`]: playerName, status: 'starting' });
                 } else if (data.status === 'starting' || data.status === 'playing') {
                     if (data.status === 'starting') {
                         updateDoc(roomDocRef, { status: 'playing' });
                         initGame('multi');
-                        document.getElementById('opponent-track').classList.remove('opacity-50');
+                        document.getElementById('opponent-track').classList.remove('opacity-30');
                     }
-
                     const opponentId = data.players.find(id => id !== user.uid);
                     if (opponentId) {
                         const oppProgress = data.progress[opponentId] || 0;
+                        const oppName = data.names[opponentId] || "Đối thủ";
                         opponentCar.style.left = `${(oppProgress / GAME_LENGTH) * 90}%`;
+                        document.getElementById('opponent-label').innerText = oppName;
                     }
-
                     if (data.winner && data.winner !== user.uid) endGame(false);
                 }
-            }, (error) => {
-                console.error("Firestore Error:", error);
             });
         };
 
-        startSoloBtn.onclick = () => initGame('solo');
-        joinMultiBtn.onclick = joinMultiplayer;
+        document.getElementById('start-solo-btn').onclick = () => initGame('solo');
+        document.getElementById('join-multi-btn').onclick = joinMultiplayer;
+        document.getElementById('restart-btn').onclick = () => location.reload();
 
+        startApp();
     </script>
 </body>
 </html>
