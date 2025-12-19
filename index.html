@@ -76,7 +76,7 @@
         <!-- Header -->
         <div class="bg-emerald-400 p-4 flex justify-between items-center text-gray-900 font-game">
             <h1 class="text-xl">Speedy Home Row Express</h1>
-            <div id="player-display-name" class="text-xs font-bold bg-white/30 px-2 py-1 rounded">Khách</div>
+            <div id="player-display-name" class="text-xs font-bold bg-white/30 px-2 py-1 rounded tracking-tighter">Khách</div>
         </div>
 
         <div id="main-content" class="relative">
@@ -165,7 +165,7 @@
                     <div class="bg-gray-900/50 rounded-2xl p-4 border border-gray-700">
                         <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Bảng xếp hạng tài xế</h3>
                         <div id="leaderboard-list" class="space-y-2 text-sm">
-                            <div class="text-gray-600 italic">Đang tải...</div>
+                            <div class="text-gray-600 italic">Chưa có dữ liệu...</div>
                         </div>
                     </div>
 
@@ -178,10 +178,10 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         let firebaseConfig = {};
-        try { if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config); } catch (e) {}
+        try { if (typeof __firebase_config !== 'undefined' && __firebase_config) firebaseConfig = JSON.parse(__firebase_config); } catch (e) {}
 
         const homeRowWords = ["ASDF", "JKL;", "FALL", "LADS", "DAFS", "GLAD", "ALAS", "DASH", "FLAK", "SLAD", "SALA", "KALS", "LAKY", "JASS", "FADS", "LASS", "SKAL", "ALFA", "JAVA", "FLASK", "DAFFY", "GLASS", "SHALL", "SKULL", "FLASH", "SALSA"];
 
@@ -226,20 +226,39 @@
             }
         };
 
-        // Load tên cũ nếu có
+        // Load tên cũ
         const savedName = localStorage.getItem('speedy_last_name');
         if (savedName) nameInput.value = savedName;
 
         const startApp = async () => {
-            if (!firebaseConfig.apiKey) return;
+            // Kiểm tra xem có config không, nếu không thì dùng chế độ Offline
+            if (!firebaseConfig || !firebaseConfig.apiKey) {
+                console.log("Chế độ Offline kích hoạt");
+                return;
+            }
             try {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-                else await signInAnonymously(auth);
-                onAuthStateChanged(auth, (u) => { if (u) user = u; });
-            } catch (err) { console.error("Init Error", err); }
+                
+                const initAuth = async () => {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                };
+                await initAuth();
+                
+                onAuthStateChanged(auth, (u) => { 
+                    if (u) {
+                        user = u;
+                        playerDisplayName.innerText = `${playerName} (${user.uid.substring(0,4)})`;
+                    }
+                });
+            } catch (err) { 
+                console.warn("Không thể kết nối Firebase, chuyển sang chế độ Offline.", err);
+            }
         };
 
         const initGame = (mode) => {
@@ -289,8 +308,12 @@
             progressDisplay.innerText = wordIndex;
             const elapsed = (Date.now() - startTime) / 60000;
             wpmDisplay.innerText = Math.round(wordIndex / elapsed) || 0;
+            
             if (gameMode === 'multi' && roomDocRef && user && db) {
-                updateDoc(roomDocRef, { [`progress.${user.uid}`]: wordIndex, [`names.${user.uid}`]: playerName });
+                updateDoc(roomDocRef, { 
+                    [`progress.${user.uid}`]: wordIndex, 
+                    [`names.${user.uid}`]: playerName 
+                }).catch(e => console.error("Lỗi cập nhật tiến độ:", e));
             }
         };
 
@@ -307,6 +330,10 @@
 
         const renderLeaderboard = (scores) => {
             const list = document.getElementById('leaderboard-list');
+            if (scores.length === 0) {
+                list.innerHTML = `<div class="text-gray-600 italic">Chưa có dữ liệu...</div>`;
+                return;
+            }
             list.innerHTML = scores.map((s, idx) => `
                 <div class="flex justify-between items-center bg-gray-800/50 p-2 rounded-lg">
                     <span class="text-emerald-400 font-game w-8">${idx + 1}.</span>
@@ -329,14 +356,20 @@
             saveToLeaderboard(finalWpm);
 
             if (gameMode === 'multi' && roomDocRef && won && user && db) {
-                updateDoc(roomDocRef, { winner: user.uid, winnerName: playerName });
+                updateDoc(roomDocRef, { winner: user.uid, winnerName: playerName }).catch(() => {});
             }
         };
 
         const joinMultiplayer = async () => {
-            if (!db || !user) { alert("Yêu cầu cấu hình Firebase!"); return; }
+            if (!db || !user) { 
+                alert("Bạn cần cấu hình Firebase để chơi chế độ Thi đấu. Hãy dùng chế độ Luyện tập!"); 
+                joinMultiBtn.innerText = "THI ĐẤU";
+                joinMultiBtn.disabled = false;
+                return; 
+            }
             joinMultiBtn.innerText = "ĐANG TÌM...";
             joinMultiBtn.disabled = true;
+            
             roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'matches', 'global_room');
             onSnapshot(roomDocRef, (snapshot) => {
                 const data = snapshot.data();
@@ -359,6 +392,11 @@
                     }
                     if (data.winner && data.winner !== user.uid) endGame(false);
                 }
+            }, (err) => {
+                console.error("Lỗi Firestore:", err);
+                alert("Lỗi kết nối phòng đua!");
+                joinMultiBtn.disabled = false;
+                joinMultiBtn.innerText = "THI ĐẤU";
             });
         };
 
@@ -366,7 +404,11 @@
         document.getElementById('join-multi-btn').onclick = joinMultiplayer;
         document.getElementById('restart-btn').onclick = () => location.reload();
 
+        // Khởi động ứng dụng
         startApp();
+        // Load bảng xếp hạng hiện tại lên overlay
+        const currentScores = JSON.parse(localStorage.getItem('speedy_scores') || '[]');
+        renderLeaderboard(currentScores);
     </script>
 </body>
 </html>
